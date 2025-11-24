@@ -273,18 +273,30 @@ export default defineConfig({
 			output: {
 				manualChunks: (id) => {
 					if (id.includes('node_modules')) {
-						if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+						// Ensure React and React-DOM are loaded together first
+						if (id.includes('react') && !id.includes('react-dom')) {
+							return 'react-core';
+						}
+						if (id.includes('react-dom') || id.includes('scheduler') || id.includes('react/jsx')) {
+							return 'react-core';
+						}
+						// React Router after React is loaded
+						if (id.includes('react-router')) {
 							return 'react-vendor';
 						}
+						// UI libraries
 						if (id.includes('@radix-ui')) {
 							return 'ui-vendor';
 						}
+						// Charts
 						if (id.includes('chart.js') || id.includes('react-chartjs')) {
 							return 'charts';
 						}
+						// Supabase
 						if (id.includes('@supabase')) {
 							return 'supabase';
 						}
+						// Everything else
 						return 'vendor';
 					}
 				},
