@@ -104,30 +104,64 @@ const auditLog = async (tenantId, userId, action, details) => {
 export const supabaseService = {
   // Auth & User
   getUserProfile: async (userId) => {
+    if (!userId) {
+      console.warn('getUserProfile: No userId provided');
+      return null;
+    }
+    
     try {
-      // First get user profile
-      const { data: profile, error: profileError } = await supabase
+      // First get user profile with timeout protection
+      const profilePromise = supabase
         .from('public_users')
         .select('*')
         .eq('id', userId)
         .single();
       
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      );
+      
+      const { data: profile, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]).catch(err => {
+        console.warn('Profile fetch error:', err);
+        return { data: null, error: err };
+      });
+      
       if (profileError || !profile) {
-        console.warn('User profile not found:', profileError);
+        console.warn('User profile not found:', profileError?.message || 'No profile data');
         return null;
       }
 
-      // Then get tenant info if tenant_id exists
+      // Then get tenant info if tenant_id exists (optional - don't fail if tenant doesn't exist)
       let tenant = null;
       if (profile.tenant_id) {
-        const { data: tenantData, error: tenantError } = await supabase
-          .from('tenants')
-          .select('*')
-          .eq('id', profile.tenant_id)
-          .single();
-        
-        if (!tenantError && tenantData) {
-          tenant = tenantData;
+        try {
+          const tenantPromise = supabase
+            .from('tenants')
+            .select('*')
+            .eq('id', profile.tenant_id)
+            .single();
+          
+          const tenantTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Tenant fetch timeout')), 3000)
+          );
+          
+          const { data: tenantData, error: tenantError } = await Promise.race([
+            tenantPromise,
+            tenantTimeoutPromise
+          ]).catch(err => {
+            console.warn('Tenant fetch error:', err);
+            return { data: null, error: err };
+          });
+          
+          if (!tenantError && tenantData) {
+            tenant = tenantData;
+          }
+        } catch (tenantErr) {
+          console.warn('Tenant fetch exception (non-critical):', tenantErr);
+          // Continue without tenant - not critical
         }
       }
 

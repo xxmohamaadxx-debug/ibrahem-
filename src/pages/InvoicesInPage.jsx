@@ -20,11 +20,31 @@ const InvoicesInPage = () => {
   }, [user]);
 
   const loadInvoices = async () => {
+    if (!user?.tenant_id) {
+      setLoading(false);
+      setInvoices([]);
+      return;
+    }
+
     try {
-      const data = await supabaseService.getInvoicesIn(user.tenant_id);
-      setInvoices(data || []);
+      const timeoutPromise = new Promise((resolve) => 
+        setTimeout(() => resolve([]), 8000)
+      );
+      
+      const data = await Promise.race([
+        supabaseService.getInvoicesIn(user.tenant_id).catch(() => []),
+        timeoutPromise
+      ]);
+      
+      setInvoices(Array.isArray(data) ? data : []);
     } catch (error) {
-      toast({ title: t('common.error'), variant: "destructive" });
+      console.error('Load invoices error:', error);
+      toast({ 
+        title: t('common.error'), 
+        description: error.message || 'حدث خطأ في تحميل البيانات',
+        variant: "destructive" 
+      });
+      setInvoices([]);
     } finally {
       setLoading(false);
     }

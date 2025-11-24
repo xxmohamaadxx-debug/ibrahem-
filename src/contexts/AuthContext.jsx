@@ -24,22 +24,42 @@ export const AuthProvider = ({ children }) => {
       if (!sessionUser) {
         setUser(null);
         setTenant(null);
+        setLoading(false);
+        setInitialized(true);
+        return;
+      }
+
+      // Check if admin user first (before trying to fetch profile)
+      const adminEmails = ['systemibrahem@gmail.com', 'admin@ibrahim.com'];
+      const isAdminEmail = adminEmails.includes(sessionUser.email?.toLowerCase());
+      
+      if (isAdminEmail) {
+        setUser({ 
+          ...sessionUser, 
+          role: ROLES.SUPER_ADMIN, 
+          isSuperAdmin: true,
+          name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'Admin'
+        });
+        setLoading(false);
+        setInitialized(true);
         return;
       }
 
       // Get User Profile (includes tenant info now)
-      const profileResult = await supabaseService.getUserProfile(sessionUser.id).catch(() => null);
+      let profileResult = null;
+      try {
+        profileResult = await supabaseService.getUserProfile(sessionUser.id);
+      } catch (profileError) {
+        console.warn('Profile fetch error (will continue):', profileError);
+        // Continue without profile - might be a new user
+      }
       
       if (!profileResult) {
-        // If no profile, check if admin user
-        const adminEmails = ['systemibrahem@gmail.com', 'admin@ibrahim.com'];
-        if (adminEmails.includes(sessionUser.email?.toLowerCase())) {
-          setUser({ ...sessionUser, role: ROLES.SUPER_ADMIN, isSuperAdmin: true });
-          setLoading(false);
-          setInitialized(true);
-          return;
-        }
-        setUser(null);
+        // New user without profile - set basic user data
+        setUser({
+          ...sessionUser,
+          name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'User'
+        });
         setTenant(null);
         setLoading(false);
         setInitialized(true);
@@ -63,40 +83,46 @@ export const AuthProvider = ({ children }) => {
         };
 
         // Check Subscription Expiry
-        if (tenantInfo && !userData.isSuperAdmin) {
-           const expiresAt = new Date(tenantInfo.subscription_expires_at);
-           const now = new Date();
-           const diffDays = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
-           
-           tenantInfo.daysRemaining = diffDays;
-           tenantInfo.isExpired = diffDays <= 0;
+        if (tenantInfo && !userData.isSuperAdmin && tenantInfo.subscription_expires_at) {
+          try {
+            const expiresAt = new Date(tenantInfo.subscription_expires_at);
+            const now = new Date();
+            if (!isNaN(expiresAt.getTime())) {
+              const diffDays = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+              
+              tenantInfo.daysRemaining = diffDays;
+              tenantInfo.isExpired = diffDays <= 0;
 
-          if (tenantInfo.isExpired) {
-            toast({
-              title: "انتهت صلاحية الاشتراك",
-              description: "انتهت صلاحية اشتراك متجرك. يرجى التواصل مع المدير للتجديد.",
-              variant: "destructive",
-              duration: 10000
-            });
-          } else if (diffDays <= 7) {
-            toast({
-              title: "قرب انتهاء الاشتراك",
-              description: `سينتهي اشتراكك خلال ${diffDays} يوم. يرجى التجديد قريباً.`,
-              variant: "warning"
-            });
+              if (tenantInfo.isExpired) {
+                toast({
+                  title: "انتهت صلاحية الاشتراك",
+                  description: "انتهت صلاحية اشتراك متجرك. يرجى التواصل مع المدير للتجديد.",
+                  variant: "destructive",
+                  duration: 10000
+                });
+              } else if (diffDays <= 7) {
+                toast({
+                  title: "قرب انتهاء الاشتراك",
+                  description: `سينتهي اشتراكك خلال ${diffDays} يوم. يرجى التجديد قريباً.`,
+                  variant: "warning"
+                });
+              }
+            }
+          } catch (expiryError) {
+            console.warn('Subscription expiry check error:', expiryError);
+            // Continue without expiry check
           }
         }
 
         setUser(userData);
         setTenant(tenantInfo);
       } else {
-        // Fallback for super admin initial seed scenario if profile missing
-        const adminEmails = ['systemibrahem@gmail.com', 'admin@ibrahim.com'];
-        if (adminEmails.includes(sessionUser.email?.toLowerCase())) {
-           setUser({ ...sessionUser, role: ROLES.SUPER_ADMIN, isSuperAdmin: true });
-        } else {
-           setUser(sessionUser);
-        }
+        // Fallback - set basic user data
+        setUser({
+          ...sessionUser,
+          name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'User'
+        });
+        setTenant(null);
       }
     } catch (error) {
       console.error("Auth setup error:", error);

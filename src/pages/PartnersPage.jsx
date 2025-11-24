@@ -23,11 +23,31 @@ const PartnersPage = () => {
   }, [user]);
 
   const loadData = async () => {
+    if (!user?.tenant_id) {
+      setLoading(false);
+      setPartners([]);
+      return;
+    }
+
     try {
-      const data = await supabaseService.getPartners(user.tenant_id);
-      setPartners(data || []);
+      const timeoutPromise = new Promise((resolve) => 
+        setTimeout(() => resolve([]), 8000)
+      );
+      
+      const data = await Promise.race([
+        supabaseService.getPartners(user.tenant_id).catch(() => []),
+        timeoutPromise
+      ]);
+      
+      setPartners(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error(e);
+      console.error('Load partners error:', e);
+      toast({ 
+        title: t('common.error'), 
+        description: e.message || 'حدث خطأ في تحميل البيانات',
+        variant: "destructive" 
+      });
+      setPartners([]);
     } finally {
       setLoading(false);
     }

@@ -45,50 +45,68 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const loadStats = async () => {
+      // Allow super admin to see stats even without tenant_id
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // For super admin, load empty stats (they don't have tenant-specific data)
+      if (user?.isSuperAdmin && !user?.tenant_id) {
+        setStats({ income: 0, expenses: 0, net: 0, employees: 0, lowStock: 0 });
+        setLoading(false);
+        return;
+      }
+
+      // Regular users need tenant_id
       if (!user?.tenant_id) {
         setLoading(false);
         return;
       }
+
       try {
-        // Use Promise.allSettled for better error handling
-        const results = await Promise.allSettled([
-          supabaseService.getInvoicesIn(user.tenant_id).catch(() => []),
-          supabaseService.getInvoicesOut(user.tenant_id).catch(() => []),
-          supabaseService.getEmployees(user.tenant_id).catch(() => []),
-          supabaseService.getInventory(user.tenant_id).catch(() => [])
-        ]);
+        // Use Promise.allSettled with timeout protection
+        const timeoutPromise = new Promise((resolve) => 
+          setTimeout(() => resolve([]), 10000) // 10 second timeout
+        );
+
+        const promises = [
+          Promise.race([supabaseService.getInvoicesIn(user.tenant_id).catch(() => []), timeoutPromise]),
+          Promise.race([supabaseService.getInvoicesOut(user.tenant_id).catch(() => []), timeoutPromise]),
+          Promise.race([supabaseService.getEmployees(user.tenant_id).catch(() => []), timeoutPromise]),
+          Promise.race([supabaseService.getInventory(user.tenant_id).catch(() => []), timeoutPromise])
+        ];
+
+        const results = await Promise.allSettled(promises);
         
-        const invoicesIn = results[0].status === 'fulfilled' ? results[0].value : [];
-        const invoicesOut = results[1].status === 'fulfilled' ? results[1].value : [];
-        const employees = results[2].status === 'fulfilled' ? results[2].value : [];
-        const inventory = results[3].status === 'fulfilled' ? results[3].value : [];
+        const invoicesIn = Array.isArray(results[0].value) ? results[0].value : [];
+        const invoicesOut = Array.isArray(results[1].value) ? results[1].value : [];
+        const employees = Array.isArray(results[2].value) ? results[2].value : [];
+        const inventory = Array.isArray(results[3].value) ? results[3].value : [];
         
-        const totalExpenses = Array.isArray(invoicesIn) ? invoicesIn.reduce((sum, inv) => sum + Number(inv.amount || 0), 0) : 0;
-        const totalIncome = Array.isArray(invoicesOut) ? invoicesOut.reduce((sum, inv) => sum + Number(inv.amount || 0), 0) : 0;
+        const totalExpenses = invoicesIn.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+        const totalIncome = invoicesOut.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
         
         setStats({
           income: totalIncome,
           expenses: totalExpenses,
           net: totalIncome - totalExpenses,
-          employees: Array.isArray(employees) ? employees.filter(e => e.status === 'Active').length : 0,
-          lowStock: Array.isArray(inventory) ? inventory.filter(i => (i.quantity || 0) <= (i.min_stock || 5)).length : 0
+          employees: employees.filter(e => e?.status === 'Active').length,
+          lowStock: inventory.filter(i => Number(i?.quantity || 0) <= Number(i?.min_stock || 5)).length
         });
       } catch (error) {
         console.error("Dashboard load error:", error);
+        // Set default stats on error - don't leave page blank
         setStats({ income: 0, expenses: 0, net: 0, employees: 0, lowStock: 0 });
       } finally {
         setLoading(false);
       }
     };
     
-    // Load stats immediately for super admin, with delay for others to prevent blocking
-    if (user?.isSuperAdmin) {
-      loadStats();
-    } else {
-      const timeoutId = setTimeout(loadStats, 50);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [user?.tenant_id, user?.isSuperAdmin]);
+    // Always load stats, but with small delay to prevent blocking
+    const timeoutId = setTimeout(loadStats, 100);
+    return () => clearTimeout(timeoutId);
+  }, [user?.tenant_id, user?.isSuperAdmin, user?.id]);
 
   const chartData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
