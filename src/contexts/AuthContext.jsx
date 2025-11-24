@@ -27,24 +27,27 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Get User Profile
-      const profile = await supabaseService.getUserProfile(sessionUser.id).catch(() => null);
+      // Get User Profile (includes tenant info now)
+      const profileResult = await supabaseService.getUserProfile(sessionUser.id).catch(() => null);
       
-      // Get Tenant Info only if profile exists and has tenant_id
-      let tenantInfo = null;
-      if (profile?.tenant_id) {
-        try {
-          const { data, error } = await supabase
-            .from('tenants')
-            .select('*')
-            .eq('id', profile.tenant_id)
-            .single();
-          if (!error && data) tenantInfo = data;
-        } catch (err) {
-          console.warn('Tenant fetch error:', err);
-          // Continue even if tenant fetch fails
+      if (!profileResult) {
+        // If no profile, check if admin user
+        const adminEmails = ['systemibrahem@gmail.com', 'admin@ibrahim.com'];
+        if (adminEmails.includes(sessionUser.email?.toLowerCase())) {
+          setUser({ ...sessionUser, role: ROLES.SUPER_ADMIN, isSuperAdmin: true });
+          setLoading(false);
+          setInitialized(true);
+          return;
         }
+        setUser(null);
+        setTenant(null);
+        setLoading(false);
+        setInitialized(true);
+        return;
       }
+
+      const profile = profileResult;
+      const tenantInfo = profile.tenant || null;
 
       if (profile) {
         // Check if user is super admin - support multiple admin emails
@@ -68,20 +71,20 @@ export const AuthProvider = ({ children }) => {
            tenantInfo.daysRemaining = diffDays;
            tenantInfo.isExpired = diffDays <= 0;
 
-           if (tenantInfo.isExpired) {
-             toast({
-               title: "Subscription Expired",
-               description: "Your store subscription has expired. Please contact admin to renew.",
-               variant: "destructive",
-               duration: 10000
-             });
-           } else if (diffDays <= 7) {
-             toast({
-               title: "Subscription Expiring Soon",
-               description: `Your subscription expires in ${diffDays} days.`,
-               variant: "warning"
-             });
-           }
+          if (tenantInfo.isExpired) {
+            toast({
+              title: "انتهت صلاحية الاشتراك",
+              description: "انتهت صلاحية اشتراك متجرك. يرجى التواصل مع المدير للتجديد.",
+              variant: "destructive",
+              duration: 10000
+            });
+          } else if (diffDays <= 7) {
+            toast({
+              title: "قرب انتهاء الاشتراك",
+              description: `سينتهي اشتراكك خلال ${diffDays} يوم. يرجى التجديد قريباً.`,
+              variant: "warning"
+            });
+          }
         }
 
         setUser(userData);

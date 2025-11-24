@@ -7,21 +7,32 @@ import { supabase } from '@/lib/customSupabaseClient';
  * @param {string} tenantId - Tenant ID to filter by
  * @param {Object} [options] - select string, etc.
  */
-const getByTenant = async (table, tenantId, { select = '*', orderBy = { column: 'created_at', ascending: false } } = {}) => {
-  if (!tenantId) throw new Error('Tenant ID is required');
-  
-  let query = supabase
-    .from(table)
-    .select(select)
-    .eq('tenant_id', tenantId);
-
-  if (orderBy) {
-    query = query.order(orderBy.column, { ascending: orderBy.ascending });
+const   getByTenant = async (table, tenantId, { select = '*', orderBy = { column: 'created_at', ascending: false } } = {}) => {
+  if (!tenantId) {
+    console.warn(`getByTenant: No tenantId provided for table ${table}`);
+    return [];
   }
+  
+  try {
+    let query = supabase
+      .from(table)
+      .select(select)
+      .eq('tenant_id', tenantId);
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
+    if (orderBy && orderBy.column) {
+      query = query.order(orderBy.column, { ascending: orderBy.ascending });
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error(`getByTenant error for ${table}:`, error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error(`getByTenant exception for ${table}:`, error);
+    return [];
+  }
 };
 
 /**
@@ -93,13 +104,38 @@ const auditLog = async (tenantId, userId, action, details) => {
 export const supabaseService = {
   // Auth & User
   getUserProfile: async (userId) => {
-    const { data, error } = await supabase
-      .from('public_users')
-      .select(`*, tenant:tenants(*)`)
-      .eq('id', userId)
-      .single();
-    if (error) return null;
-    return data;
+    try {
+      // First get user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('public_users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError || !profile) {
+        console.warn('User profile not found:', profileError);
+        return null;
+      }
+
+      // Then get tenant info if tenant_id exists
+      let tenant = null;
+      if (profile.tenant_id) {
+        const { data: tenantData, error: tenantError } = await supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', profile.tenant_id)
+          .single();
+        
+        if (!tenantError && tenantData) {
+          tenant = tenantData;
+        }
+      }
+
+      return { ...profile, tenant };
+    } catch (error) {
+      console.error('getUserProfile error:', error);
+      return null;
+    }
   },
 
   createTenant: async (tenantName, ownerUserId) => {
@@ -145,13 +181,29 @@ export const supabaseService = {
   deleteInvoiceOut: (id, tenantId) => deleteRecord('invoices_out', id, tenantId),
 
   // Inventory
-  getInventory: (tenantId) => getByTenant('inventory_items', tenantId),
+  getInventory: async (tenantId) => {
+    if (!tenantId) return [];
+    try {
+      return await getByTenant('inventory_items', tenantId);
+    } catch (error) {
+      console.error('getInventory error:', error);
+      return [];
+    }
+  },
   createInventory: (data, tenantId) => createRecord('inventory_items', data, tenantId),
   updateInventory: (id, data, tenantId) => updateRecord('inventory_items', id, data, tenantId),
   deleteInventory: (id, tenantId) => deleteRecord('inventory_items', id, tenantId),
 
   // Employees
-  getEmployees: (tenantId) => getByTenant('employees', tenantId),
+  getEmployees: async (tenantId) => {
+    if (!tenantId) return [];
+    try {
+      return await getByTenant('employees', tenantId);
+    } catch (error) {
+      console.error('getEmployees error:', error);
+      return [];
+    }
+  },
   createEmployee: (data, tenantId) => createRecord('employees', data, tenantId),
   updateEmployee: (id, data, tenantId) => updateRecord('employees', id, data, tenantId),
   deleteEmployee: (id, tenantId) => deleteRecord('employees', id, tenantId),

@@ -242,7 +242,40 @@ export const translations = {
       draft: "مسودة",
       pending: "قيد الانتظار",
       approved: "موافق عليه",
-      rejected: "مرفوض"
+      rejected: "مرفوض",
+      expired: "منتهي الصلاحية"
+    },
+    subscription: {
+      expiringSoon: "قرب انتهاء الاشتراك"
+    },
+    adminPanel: {
+      title: "لوحة إدارة النظام",
+      subtitle: "إدارة جميع المتاجر والاشتراكات",
+      createNewStore: "إنشاء متجر جديد",
+      totalStores: "إجمالي المتاجر",
+      activeSubscriptions: "الاشتراكات النشطة",
+      expired: "منتهية الصلاحية",
+      storeName: "اسم المتجر",
+      owner: "المالك",
+      plan: "الخطة",
+      expiresAt: "تاريخ الانتهاء",
+      status: "الحالة",
+      unknown: "غير معروف",
+      extendMonth: "إضافة شهر",
+      noStores: "لا توجد متاجر",
+      goToRegister: "الذهاب لصفحة التسجيل",
+      note: "ملاحظة: لضمان الأمان، يرجى تسجيل المتاجر الجديدة عبر صفحة التسجيل العامة، أو تنفيذ Edge Function آمن لإنشاء المستخدمين من قبل المدير.",
+      success: {
+        subscriptionExtended: "تم تمديد الاشتراك بنجاح!"
+      },
+      errors: {
+        loadFailed: "فشل تحميل المتاجر",
+        loadError: "حدث خطأ أثناء تحميل البيانات",
+        updateFailed: "فشل التحديث",
+        systemLimitation: "قيود النظام",
+        createStoreNote: "لإنشاء متجر جديد، يرجى تسجيل الخروج واستخدام صفحة التسجيل، أو تنفيذ Edge Function لإنشاء المستخدمين من قبل المدير.",
+        accessDenied: "الوصول مرفوض. المشرف العام فقط."
+      }
     }
   },
   tr: {
