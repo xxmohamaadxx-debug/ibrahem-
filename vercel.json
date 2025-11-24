@@ -5,7 +5,7 @@
   "installCommand": "npm ci",
   "headers": [
     {
-      "source": "/assets/(.*)",
+      "source": "/assets/:path*",
       "headers": [
         {
           "key": "Cache-Control",
@@ -14,7 +14,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(js|css|woff2|png|jpg|jpeg|svg|ico|gif|webp))",
+      "source": "/:path*\\.(js|css|woff2|png|jpg|jpeg|svg|ico|gif|webp)",
       "headers": [
         {
           "key": "Cache-Control",
