@@ -26,6 +26,7 @@ const PartnersPage = React.lazy(() => import('@/pages/PartnersPage'));
 const UsersPage = React.lazy(() => import('@/pages/UsersPage'));
 const StoreUsersPage = React.lazy(() => import('@/pages/StoreUsersPage'));
 const AdminPanel = React.lazy(() => import('@/pages/AdminPanel'));
+const AdminSettingsPage = React.lazy(() => import('@/pages/AdminSettingsPage'));
 const AuditLogPage = React.lazy(() => import('@/pages/AuditLogPage'));
 const SettingsPage = React.lazy(() => import('@/pages/SettingsPage'));
 const SubscriptionPage = React.lazy(() => import('@/pages/SubscriptionPage'));
@@ -102,6 +103,14 @@ function App() {
                     <PrivateRoute roles={['SUPER_ADMIN']}>
                       <MainLayout>
                         <AdminPanel />
+                      </MainLayout>
+                    </PrivateRoute>
+                  } />
+
+                  <Route path="/admin-settings" element={
+                    <PrivateRoute roles={['SUPER_ADMIN']}>
+                      <MainLayout>
+                        <AdminSettingsPage />
                       </MainLayout>
                     </PrivateRoute>
                   } />

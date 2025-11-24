@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/lib/customSupabaseClient';
+import { neonService } from '@/lib/neonService';
 import { Button } from '@/components/ui/button';
 import { Loader2, Plus, Store, Calendar, AlertTriangle, Phone, MessageCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -32,45 +31,8 @@ const AdminPanel = () => {
 
   const fetchStores = async () => {
     try {
-      // First get all tenants - بدون order لمنع خطأ 500
-      const { data: tenantsData, error: tenantsError } = await supabase
-        .from('tenants')
-        .select('*');
-        
-      if (tenantsError) {
-        console.error('Tenants fetch error:', tenantsError);
-        throw tenantsError;
-      }
-      
-      // Sort locally instead of in query
-      const sortedTenants = (tenantsData || []).sort((a, b) => {
-        const dateA = new Date(a.created_at || 0);
-        const dateB = new Date(b.created_at || 0);
-        return dateB - dateA;
-      });
-      
-      // Then get owner info for each tenant
-      const storesWithOwners = await Promise.all(
-        sortedTenants.map(async (tenant) => {
-          if (tenant.owner_user_id) {
-            try {
-              const { data: ownerData } = await supabase
-                .from('public_users')
-                .select('name, email')
-                .eq('id', tenant.owner_user_id)
-                .single();
-              
-              return { ...tenant, owner: ownerData || null };
-            } catch (err) {
-              console.warn('Owner fetch error for tenant:', tenant.id, err);
-              return { ...tenant, owner: null };
-            }
-          }
-          return { ...tenant, owner: null };
-        })
-      );
-      
-      setStores(storesWithOwners);
+      const tenants = await neonService.getAllTenants();
+      setStores(tenants || []);
     } catch (error) {
       console.error("Fetch stores error:", error);
       toast({ 
@@ -88,25 +50,14 @@ const AdminPanel = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // 1. Create Auth User (This requires service_role usually, but for demo we use regular signup 
-      // and assume admin has permission or we simulate it via function if Supabase configured)
-      // NOTE: In client-side Supabase, admin cannot create other users without logging out.
-      // Ideally, this should call a Supabase Edge Function.
-      // For this implementation, we will simulate by instructing to use the registration page
-      // or showing a message.
-      
       toast({ 
         title: t('adminPanel.errors.systemLimitation'), 
         description: t('adminPanel.errors.createStoreNote'),
         variant: "warning"
       });
-      
-      // Normally: 
-      // await supabase.functions.invoke('admin-create-store', { body: formData })
-      
       setDialogOpen(false);
     } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -118,16 +69,12 @@ const AdminPanel = () => {
     const newExpiry = new Date(current.setDate(current.getDate() + plan.durationDays));
     
     try {
-      const { error } = await supabase
-        .from('tenants')
-        .update({ 
-          subscription_expires_at: newExpiry.toISOString(),
-          subscription_plan: planId,
-          subscription_status: 'active'
-        })
-        .eq('id', storeId);
+      await neonService.updateTenant(storeId, { 
+        subscription_expires_at: newExpiry.toISOString(),
+        subscription_plan: planId,
+        subscription_status: 'active'
+      });
 
-      if (error) throw error;
       toast({ title: t('adminPanel.success.subscriptionExtended') });
       fetchStores();
     } catch (error) {
@@ -202,10 +149,10 @@ const AdminPanel = () => {
                             <tr key={store.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td className="p-4 font-medium text-gray-900 dark:text-white">{store.name}</td>
                                 <td className="p-4 text-sm">
-                                    {store.owner ? (
+                                    {store.owner_name ? (
                                         <div>
-                                            <div className="font-medium text-gray-900 dark:text-white">{store.owner.name}</div>
-                                            <div className="text-gray-500 dark:text-gray-400 text-xs">{store.owner.email}</div>
+                                            <div className="font-medium text-gray-900 dark:text-white">{store.owner_name}</div>
+                                            <div className="text-gray-500 dark:text-gray-400 text-xs">{store.owner_email}</div>
                                         </div>
                                     ) : <span className="text-gray-400">{t('adminPanel.unknown')}</span>}
                                 </td>

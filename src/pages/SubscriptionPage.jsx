@@ -39,15 +39,20 @@ const SubscriptionPage = () => {
       {tenant && (
         <div className="bg-gradient-to-r from-orange-500 to-pink-500 text-white p-6 rounded-2xl shadow-lg max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between">
             <div>
-                <h3 className="text-lg font-semibold opacity-90">Current Plan</h3>
-                <p className="text-2xl font-bold capitalize">{tenant.subscription_plan} Plan</p>
+                <h3 className="text-lg font-semibold opacity-90">{t('subscription.currentPlan')}</h3>
+                <p className="text-2xl font-bold">
+                  {tenant.subscription_plan === 'monthly' ? t('subscription.monthly') :
+                   tenant.subscription_plan === '6months' ? t('subscription.sixMonths') :
+                   tenant.subscription_plan === 'yearly' ? t('subscription.yearly') :
+                   tenant.subscription_plan || t('subscription.monthly')}
+                </p>
                 <p className="text-sm opacity-80 mt-1">
-                    Status: {tenant.subscription_status} • Expires: {new Date(tenant.subscription_expires_at).toLocaleDateString()}
+                    {t('common.status')}: {tenant.subscription_status === 'active' ? t('status.active') : t('status.expired')} • {t('adminPanel.expiresAt')}: {tenant.subscription_expires_at ? new Date(tenant.subscription_expires_at).toLocaleDateString('ar-SA') : '-'}
                 </p>
             </div>
             <div className="mt-4 md:mt-0">
                 <span className={`px-4 py-2 rounded-full text-sm font-bold ${tenant.isExpired ? 'bg-red-500 text-white' : 'bg-white text-orange-600'}`}>
-                    {tenant.isExpired ? 'EXPIRED' : 'ACTIVE'}
+                    {tenant.isExpired ? t('status.expired') : t('status.active')}
                 </span>
             </div>
         </div>
@@ -64,7 +69,7 @@ const SubscriptionPage = () => {
             >
                 {plan.id === 'yearly' && (
                     <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
-                        أفضل قيمة
+                        {t('subscription.bestValue')}
                     </div>
                 )}
                 <div className="p-8">
@@ -76,7 +81,7 @@ const SubscriptionPage = () => {
                     <div className="mt-4 flex items-baseline text-gray-900 dark:text-white">
                         <span className="text-4xl font-extrabold tracking-tight">${plan.price}</span>
                         <span className="ml-1 rtl:mr-1 rtl:ml-0 text-xl font-semibold text-gray-500">
-                          /{plan.id === 'monthly' ? t('subscription.perMonth') : 'term'}
+                          /{plan.id === 'monthly' ? t('subscription.perMonth') : plan.id === '6months' ? '6 أشهر' : 'سنة'}
                         </span>
                     </div>
                     <p className="mt-2 text-sm text-gray-500">

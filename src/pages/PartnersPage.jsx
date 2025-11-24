@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabaseService } from '@/lib/supabaseService';
+import { neonService } from '@/lib/neonService';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -35,7 +35,7 @@ const PartnersPage = () => {
       );
       
       const data = await Promise.race([
-        supabaseService.getPartners(user.tenant_id).catch(() => []),
+        neonService.getPartners(user.tenant_id).catch(() => []),
         timeoutPromise
       ]);
       
@@ -56,9 +56,9 @@ const PartnersPage = () => {
   const handleSave = async (data) => {
     try {
       if (selected) {
-        await supabaseService.updatePartner(selected.id, data, user.tenant_id);
+        await neonService.updatePartner(selected.id, data, user.tenant_id);
       } else {
-        await supabaseService.createPartner(data, user.tenant_id);
+        await neonService.createPartner(data, user.tenant_id);
       }
       setDialogOpen(false);
       loadData();
@@ -71,7 +71,7 @@ const PartnersPage = () => {
   const handleDelete = async (id) => {
     if(!window.confirm(t('partners.confirmDelete'))) return;
     try {
-      await supabaseService.deletePartner(id, user.tenant_id);
+      await neonService.deletePartner(id, user.tenant_id);
       loadData();
     } catch(e) { toast({ title: "Error", variant: "destructive" }); }
   };

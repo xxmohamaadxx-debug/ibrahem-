@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabaseService } from '@/lib/supabaseService';
+import { neonService } from '@/lib/neonService';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, Edit, Trash2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -14,6 +14,8 @@ const InvoicesInPage = () => {
   const { t } = useLanguage();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   useEffect(() => {
     if (user?.tenant_id) loadInvoices();
@@ -32,7 +34,7 @@ const InvoicesInPage = () => {
       );
       
       const data = await Promise.race([
-        supabaseService.getInvoicesIn(user.tenant_id).catch(() => []),
+        neonService.getInvoicesIn(user.tenant_id).catch(() => []),
         timeoutPromise
       ]);
       
@@ -53,6 +55,30 @@ const InvoicesInPage = () => {
   const handleCreate = () => {
     setSelectedInvoice(null);
     setDialogOpen(true);
+  };
+
+  const handleEdit = (invoice) => {
+    setSelectedInvoice(invoice);
+    setDialogOpen(true);
+  };
+
+  const handleSave = async (data) => {
+    try {
+      if (selectedInvoice) {
+        await neonService.updateInvoiceIn(selectedInvoice.id, data, user.tenant_id);
+      } else {
+        await neonService.createInvoiceIn({
+          ...data,
+          date: data.date || new Date().toISOString().split('T')[0],
+        }, user.tenant_id);
+      }
+      toast({ title: t('common.success') });
+      setDialogOpen(false);
+      loadInvoices();
+    } catch (error) {
+      console.error('Invoice save error:', error);
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
+    }
   };
 
   return (
@@ -112,7 +138,7 @@ const InvoicesInPage = () => {
                             <Button size="sm" variant="ghost" onClick={async () => {
                               if (window.confirm(t('common.confirmDelete'))) {
                                 try {
-                                  await supabaseService.deleteInvoiceIn(inv.id, user.tenant_id);
+                                  await neonService.deleteInvoiceIn(inv.id, user.tenant_id);
                                   toast({ title: t('common.success') });
                                   loadInvoices();
                                 } catch (error) {

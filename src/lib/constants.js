@@ -44,3 +44,19 @@ export const CONTACT_INFO = {
   EMAIL: 'systemibrahem@gmail.com',
   WHATSAPP_URL: 'https://wa.me/963994054027',
 };
+
+// سيتم تحديثها من قاعدة البيانات
+export const getContactInfo = async () => {
+  try {
+    const { neonService } = await import('./neonService');
+    const settings = await neonService.getSystemSettings();
+    return {
+      WHATSAPP: settings.support_phone || CONTACT_INFO.WHATSAPP,
+      EMAIL: settings.support_email || CONTACT_INFO.EMAIL,
+      WHATSAPP_URL: `https://wa.me/${(settings.support_whatsapp || CONTACT_INFO.WHATSAPP).replace(/[^0-9]/g, '')}`,
+    };
+  } catch (error) {
+    console.error('Error loading contact info:', error);
+    return CONTACT_INFO;
+  }
+};

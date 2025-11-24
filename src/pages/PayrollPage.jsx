@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { neonService } from '@/lib/neonService';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { storage } from '@/lib/storage';
 import PayrollDialog from '@/components/payroll/PayrollDialog';
 import PayrollTable from '@/components/payroll/PayrollTable';
 
@@ -15,47 +14,89 @@ const PayrollPage = () => {
   const { t } = useLanguage();
   const [payrolls, setPayrolls] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, [user]);
-
-  const loadData = () => {
-    setPayrolls(storage.get('payroll', user.tenant_id));
-    setEmployees(storage.get('employees', user.tenant_id));
-  };
-
-  const handleSave = (data) => {
-    const newItem = { ...data, tenant_id: user.tenant_id };
-    storage.add('payroll', newItem);
-    toast({ title: 'Payroll generated successfully' });
-    storage.log(user.tenant_id, user.id, 'GENERATE_PAYROLL', `Generated payroll for ${data.employeeName}`);
-    loadData();
-    setDialogOpen(false);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm('Delete this payroll record?')) {
-      storage.delete('payroll', id);
-      toast({ title: 'Record deleted' });
+    if (user?.tenant_id) {
       loadData();
     }
+  }, [user]);
+
+  const loadData = async () => {
+    try {
+      const [payrollData, employeesData] = await Promise.all([
+        neonService.getPayroll(user.tenant_id).catch(() => []),
+        neonService.getEmployees(user.tenant_id).catch(() => [])
+      ]);
+      setPayrolls(payrollData || []);
+      setEmployees(employeesData || []);
+    } catch (error) {
+      console.error('Load data error:', error);
+      toast({ title: 'خطأ في تحميل البيانات', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSave = async (data) => {
+    if (!user?.tenant_id) {
+      toast({ title: 'خطأ', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const netSalary = (parseFloat(data.base_salary || 0) + parseFloat(data.bonuses || 0)) - parseFloat(data.deductions || 0);
+      await neonService.createPayroll({
+        ...data,
+        net_salary: netSalary,
+        month: data.month || new Date().getMonth() + 1,
+        year: data.year || new Date().getFullYear()
+      }, user.tenant_id);
+      
+      await neonService.log(user.tenant_id, user.id, 'GENERATE_PAYROLL', `تم إنشاء راتب لـ ${data.employee_name}`);
+      toast({ title: 'تم إنشاء الراتب بنجاح' });
+      loadData();
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Save payroll error:', error);
+      toast({ title: 'خطأ في حفظ الراتب', variant: 'destructive' });
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('هل أنت متأكد من حذف سجل الراتب هذا؟')) return;
+    
+    try {
+      await neonService.deletePayroll(id, user.tenant_id);
+      toast({ title: 'تم حذف السجل' });
+      loadData();
+    } catch (error) {
+      toast({ title: 'خطأ في الحذف', variant: 'destructive' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <>
       <Helmet>
-        <title>{t('nav.payroll')} - Ibrahim Accounting System</title>
+        <title>{t('common.payroll')} - {t('common.systemName')}</title>
       </Helmet>
 
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-            {t('nav.payroll')}
+            {t('common.payroll')}
           </h1>
           <Button onClick={() => setDialogOpen(true)} className="bg-gradient-to-r from-orange-500 to-pink-500 text-white">
-            <Plus className="h-4 w-4 mr-2" /> Generate Payroll
+            <Plus className="h-4 w-4 ml-2 rtl:mr-2 rtl:ml-0" /> إنشاء راتب
           </Button>
         </div>
 

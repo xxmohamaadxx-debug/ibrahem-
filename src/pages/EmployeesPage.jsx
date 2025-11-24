@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabaseService } from '@/lib/supabaseService';
+import { neonService } from '@/lib/neonService';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, Trash2, Edit2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -22,15 +22,15 @@ const EmployeesPage = () => {
 
   const loadData = async () => {
     try {
-      const data = await supabaseService.getEmployees(user.tenant_id);
+      const data = await neonService.getEmployees(user.tenant_id);
       setEmployees(data || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
   const handleSave = async (data) => {
     try {
-      if (selected) await supabaseService.updateEmployee(selected.id, data, user.tenant_id);
-      else await supabaseService.createEmployee(data, user.tenant_id);
+      if (selected) await neonService.updateEmployee(selected.id, data, user.tenant_id);
+      else await neonService.createEmployee(data, user.tenant_id);
       setDialogOpen(false);
       loadData();
       toast({ title: t('common.success') });
@@ -40,7 +40,7 @@ const EmployeesPage = () => {
   const handleDelete = async (id) => {
     if(!window.confirm(t('common.confirmDelete'))) return;
     try {
-      await supabaseService.deleteEmployee(id, user.tenant_id);
+      await neonService.deleteEmployee(id, user.tenant_id);
       loadData();
     } catch(e) { toast({ title: t('common.error'), variant: "destructive" }); }
   };

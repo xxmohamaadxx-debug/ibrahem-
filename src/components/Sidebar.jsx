@@ -62,6 +62,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 <Shield className="h-5 w-5 ltr:mr-3 rtl:ml-3 text-purple-500 dark:text-purple-400" />
                 <span className="font-medium">{t('common.adminPanel')}</span>
              </Link>
+             <Link to="/admin-settings" className={navItemClass('/admin-settings')} onClick={handleLinkClick}>
+                <Settings className="h-5 w-5 ltr:mr-3 rtl:ml-3 text-purple-500 dark:text-purple-400" />
+                <span className="font-medium">إعدادات المدير</span>
+             </Link>
           </>
         )}
 

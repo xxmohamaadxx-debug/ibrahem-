@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { neonService } from '@/lib/neonService';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter, Download } from 'lucide-react';
+import { Plus, Search, Filter, Download, Loader2 } from 'lucide-react';
 import InvoiceDialog from '@/components/invoices/InvoiceDialog';
 import InvoiceTable from '@/components/invoices/InvoiceTable';
 import { toast } from '@/components/ui/use-toast';
@@ -13,46 +14,62 @@ const InvoicesOutPage = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    loadInvoices();
+    if (user?.tenant_id) loadInvoices();
   }, [user]);
 
-  const loadInvoices = () => {
-    const stored = JSON.parse(localStorage.getItem('invoicesOut') || '[]');
-    const filtered = stored.filter((inv) => inv.tenant_id === user.tenant_id);
-    setInvoices(filtered);
-  };
-
-  const handleSave = (invoiceData) => {
-    const stored = JSON.parse(localStorage.getItem('invoicesOut') || '[]');
-    
-    if (selectedInvoice) {
-      const index = stored.findIndex((inv) => inv.id === selectedInvoice.id);
-      if (index !== -1) {
-        stored[index] = { ...stored[index], ...invoiceData };
-      }
-      toast({ title: 'Invoice updated successfully!' });
-    } else {
-      const newInvoice = {
-        id: `inv_out_${Date.now()}`,
-        tenant_id: user.tenant_id,
-        created_by: user.id,
-        created_at: new Date().toISOString(),
-        status: 'Draft',
-        ...invoiceData,
-      };
-      stored.push(newInvoice);
-      toast({ title: 'Invoice created successfully!' });
+  const loadInvoices = async () => {
+    if (!user?.tenant_id) {
+      setLoading(false);
+      setInvoices([]);
+      return;
     }
 
-    localStorage.setItem('invoicesOut', JSON.stringify(stored));
-    loadInvoices();
-    setDialogOpen(false);
-    setSelectedInvoice(null);
+    try {
+      const data = await neonService.getInvoicesOut(user.tenant_id);
+      setInvoices(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Load invoices error:', error);
+      toast({ 
+        title: t('common.error'), 
+        description: error.message || 'حدث خطأ في تحميل البيانات',
+        variant: "destructive" 
+      });
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async (invoiceData) => {
+    if (!user?.tenant_id) {
+      toast({ title: t('common.error'), variant: "destructive" });
+      return;
+    }
+
+    try {
+      if (selectedInvoice) {
+        await neonService.updateInvoiceOut(selectedInvoice.id, invoiceData, user.tenant_id);
+        toast({ title: t('common.success') });
+      } else {
+        await neonService.createInvoiceOut({
+          ...invoiceData,
+          date: invoiceData.date || new Date().toISOString().split('T')[0],
+        }, user.tenant_id);
+        toast({ title: t('common.success') });
+      }
+      setDialogOpen(false);
+      setSelectedInvoice(null);
+      loadInvoices();
+    } catch (error) {
+      console.error('Invoice save error:', error);
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
+    }
   };
 
   const handleEdit = (invoice) => {
@@ -60,17 +77,16 @@ const InvoicesOutPage = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = (id) => {
-    if (user.role !== 'Store Owner') {
-      toast({ title: 'Only store owner can delete invoices', variant: 'destructive' });
-      return;
+  const handleDelete = async (id) => {
+    if (!window.confirm(t('common.confirmDelete'))) return;
+    
+    try {
+      await neonService.deleteInvoiceOut(id, user.tenant_id);
+      toast({ title: t('common.success') });
+      loadInvoices();
+    } catch (error) {
+      toast({ title: t('common.error'), variant: "destructive" });
     }
-
-    const stored = JSON.parse(localStorage.getItem('invoicesOut') || '[]');
-    const filtered = stored.filter((inv) => inv.id !== id);
-    localStorage.setItem('invoicesOut', JSON.stringify(filtered));
-    loadInvoices();
-    toast({ title: 'Invoice deleted successfully!' });
   };
 
   const filteredInvoices = invoices.filter((inv) =>
@@ -114,21 +130,27 @@ const InvoicesOutPage = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
-            <Button variant="outline" onClick={() => toast({ title: '🚧 This feature isn\'t implemented yet—but don\'t worry! You can request it in your next prompt! 🚀' })}>
+            <Button variant="outline" onClick={() => toast({ title: '🚧 هذه الميزة غير متاحة حالياً' })}>
               <Filter className="h-4 w-4 mr-2" />
               {t('common.filter')}
             </Button>
-            <Button variant="outline" onClick={() => toast({ title: '🚧 This feature isn\'t implemented yet—but don\'t worry! You can request it in your next prompt! 🚀' })}>
+            <Button variant="outline" onClick={() => toast({ title: '🚧 هذه الميزة غير متاحة حالياً' })}>
               <Download className="h-4 w-4 mr-2" />
               {t('common.export')}
             </Button>
           </div>
 
-          <InvoiceTable
-            invoices={filteredInvoices}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+            </div>
+          ) : (
+            <InvoiceTable
+              invoices={filteredInvoices}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          )}
         </div>
       </div>
 

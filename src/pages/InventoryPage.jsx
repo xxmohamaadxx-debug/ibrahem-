@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabaseService } from '@/lib/supabaseService';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { neonService } from '@/lib/neonService';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -11,6 +12,7 @@ import InventoryTable from '@/components/inventory/InventoryTable';
 
 const InventoryPage = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -22,50 +24,67 @@ const InventoryPage = () => {
 
   const loadData = async () => {
     try {
-      const data = await supabaseService.getInventory(user.tenant_id);
+      const data = await neonService.getInventory(user.tenant_id);
       setItems(data || []);
     } catch (e) {
-      toast({ title: "Failed to load inventory", variant: "destructive" });
+      console.error('Load inventory error:', e);
+      toast({ 
+        title: t('inventory.loadError'), 
+        description: e.message || t('common.error'),
+        variant: "destructive" 
+      });
+      setItems([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSave = async (data) => {
+    if (!user?.tenant_id) {
+      toast({ title: t('common.error'), variant: "destructive" });
+      return;
+    }
+
     try {
       if (selectedItem) {
-        await supabaseService.updateInventory(selectedItem.id, data, user.tenant_id);
-        toast({ title: "Item updated" });
+        await neonService.updateInventory(selectedItem.id, data, user.tenant_id);
+        toast({ title: t('inventory.updated') });
       } else {
-        await supabaseService.createInventory(data, user.tenant_id);
-        toast({ title: "Item created" });
+        await neonService.createInventory(data, user.tenant_id);
+        toast({ title: t('inventory.created') });
       }
       setDialogOpen(false);
       setSelectedItem(null);
       loadData();
     } catch (e) {
-      toast({ title: "Operation failed", description: e.message, variant: "destructive" });
+      console.error('Save inventory error:', e);
+      toast({ 
+        title: t('inventory.saveError'), 
+        description: e.message || t('common.error'),
+        variant: "destructive" 
+      });
     }
   };
 
   const handleDelete = async (id) => {
-    if(!window.confirm("Are you sure?")) return;
+    if(!window.confirm(t('common.confirmDelete'))) return;
     try {
-      await supabaseService.deleteInventory(id, user.tenant_id);
-      toast({ title: "Item deleted" });
+      await neonService.deleteInventory(id, user.tenant_id);
+      toast({ title: t('inventory.deleted') });
       loadData();
     } catch(e) {
-      toast({ title: "Delete failed", variant: "destructive" });
+      console.error('Delete inventory error:', e);
+      toast({ title: t('inventory.deleteError'), variant: "destructive" });
     }
   };
 
   return (
     <div className="space-y-6">
-      <Helmet><title>Inventory</title></Helmet>
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Inventory</h1>
-        <Button onClick={() => { setSelectedItem(null); setDialogOpen(true); }} className="bg-gradient-to-r from-orange-500 to-pink-500 text-white">
-          <Plus className="h-4 w-4 mr-2" /> Add Item
+      <Helmet><title>{t('common.inventory')} - {t('common.systemName')}</title></Helmet>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">{t('common.inventory')}</h1>
+        <Button onClick={() => { setSelectedItem(null); setDialogOpen(true); }} className="bg-gradient-to-r from-orange-500 to-pink-500 text-white w-full sm:w-auto">
+          <Plus className="h-4 w-4 ml-2 rtl:mr-2 rtl:ml-0" /> {t('inventory.addItem')}
         </Button>
       </div>
       

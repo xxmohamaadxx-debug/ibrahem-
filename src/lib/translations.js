@@ -181,7 +181,9 @@ export const translations = {
       expiredMessage: "انتهت صلاحية اشتراكك. يرجى التجديد للمتابعة.",
       renew: "تجديد عبر واتساب",
       currentPlan: "الخطة الحالية",
-      upgradeNow: "ترقية الآن"
+      upgradeNow: "ترقية الآن",
+      bestValue: "أفضل قيمة",
+      perTerm: "للفترة"
     },
     errors: {
       loginFailed: "فشل تسجيل الدخول",

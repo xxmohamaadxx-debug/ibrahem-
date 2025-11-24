@@ -1,7 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/lib/customSupabaseClient';
-import { supabaseService } from '@/lib/supabaseService';
+import { neonService } from '@/lib/neonService';
 import { toast } from '@/components/ui/use-toast';
 import { ROLES } from '@/lib/constants';
 
@@ -19,9 +17,33 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
-  const fetchProfile = async (sessionUser) => {
+  // تحميل المستخدم من localStorage
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const storedUserId = localStorage.getItem('userId');
+        const storedEmail = localStorage.getItem('userEmail');
+        
+        if (storedUserId && storedEmail) {
+          await fetchProfile({ id: storedUserId, email: storedEmail });
+        } else {
+          setLoading(false);
+          setInitialized(true);
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        setUser(null);
+        setLoading(false);
+        setInitialized(true);
+      }
+    };
+
+    initAuth();
+  }, []);
+
+  const fetchProfile = async (userData) => {
     try {
-      if (!sessionUser) {
+      if (!userData) {
         setUser(null);
         setTenant(null);
         setLoading(false);
@@ -29,36 +51,37 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Check if admin user first (before trying to fetch profile)
-      const adminEmails = ['systemibrahem@gmail.com', 'admin@ibrahim.com'];
-      const isAdminEmail = adminEmails.includes(sessionUser.email?.toLowerCase());
+      // Check if admin user first
+      const adminEmails = ['admin@ibrahim.com'];
+      const isAdminEmail = adminEmails.includes(userData.email?.toLowerCase());
       
       if (isAdminEmail) {
-        setUser({ 
-          ...sessionUser, 
-          role: ROLES.SUPER_ADMIN, 
-          isSuperAdmin: true,
-          name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'Admin'
-        });
-        setLoading(false);
-        setInitialized(true);
-        return;
+        const adminUser = await neonService.getUserByEmail(userData.email);
+        if (adminUser) {
+          setUser({ 
+            ...adminUser, 
+            role: ROLES.SUPER_ADMIN, 
+            isSuperAdmin: true,
+            name: adminUser.name || 'المشرف العام'
+          });
+          setLoading(false);
+          setInitialized(true);
+          return;
+        }
       }
 
-      // Get User Profile (includes tenant info now)
+      // Get User Profile (includes tenant info)
       let profileResult = null;
       try {
-        profileResult = await supabaseService.getUserProfile(sessionUser.id);
+        profileResult = await neonService.getUserProfile(userData.id);
       } catch (profileError) {
         console.warn('Profile fetch error (will continue):', profileError);
-        // Continue without profile - might be a new user
       }
       
       if (!profileResult) {
-        // New user without profile - set basic user data
         setUser({
-          ...sessionUser,
-          name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'User'
+          ...userData,
+          name: userData.name || userData.email?.split('@')[0] || 'مستخدم'
         });
         setTenant(null);
         setLoading(false);
@@ -70,14 +93,11 @@ export const AuthProvider = ({ children }) => {
       const tenantInfo = profile.tenant || null;
 
       if (profile) {
-        // Check if user is super admin - support multiple admin emails
-        const adminEmails = ['systemibrahem@gmail.com', 'admin@ibrahim.com'];
+        const adminEmails = ['admin@ibrahim.com'];
         const isSuperAdmin = adminEmails.includes(profile.email?.toLowerCase()) || profile.role === ROLES.SUPER_ADMIN;
         
         const userData = {
-          ...sessionUser,
           ...profile,
-          id: sessionUser.id, // Ensure ID consistency
           isSuperAdmin: isSuperAdmin,
           isStoreOwner: profile.role === ROLES.STORE_OWNER,
         };
@@ -110,98 +130,79 @@ export const AuthProvider = ({ children }) => {
             }
           } catch (expiryError) {
             console.warn('Subscription expiry check error:', expiryError);
-            // Continue without expiry check
           }
         }
 
         setUser(userData);
         setTenant(tenantInfo);
       } else {
-        // Fallback - set basic user data
         setUser({
-          ...sessionUser,
-          name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'User'
+          ...userData,
+          name: userData.name || userData.email?.split('@')[0] || 'مستخدم'
         });
         setTenant(null);
       }
     } catch (error) {
       console.error("Auth setup error:", error);
-      setUser(sessionUser);
+      setUser(userData);
     } finally {
       setLoading(false);
       setInitialized(true);
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
-
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (mounted) await fetchProfile(session?.user);
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-        if (mounted) {
-          setUser(null);
-          setLoading(false);
-          setInitialized(true);
-        }
-      }
-    };
-
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (mounted) await fetchProfile(session?.user);
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const login = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+    try {
+      const user = await neonService.verifyPassword(email, password);
+      if (!user) {
+        throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      }
+
+      // حفظ في localStorage
+      localStorage.setItem('userId', user.id);
+      localStorage.setItem('userEmail', user.email);
+      localStorage.setItem('userName', user.name);
+
+      await fetchProfile(user);
+      return { user };
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
   const register = async ({ name, storeName, email, password }) => {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // إنشاء Tenant أولاً
+      const tenant = await neonService.createTenant(storeName, null);
+      
+      // إنشاء المستخدم
+      const userData = await neonService.createUser({
         email,
         password,
-        options: { data: { name } }
+        name,
+        tenant_id: tenant.id,
+        role: ROLES.STORE_OWNER,
+        can_delete_data: true,
+        can_edit_data: true,
+        can_create_users: true,
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Registration failed');
+      // تحديث Tenant بالمالك
+      await neonService.updateTenant(tenant.id, { owner_user_id: userData.id });
 
-      // Creating tenant
-      const tenant = await supabaseService.createTenant(storeName, authData.user.id);
-      
-      // Create owner profile
-      await supabaseService.createUserProfile({
-          id: authData.user.id,
-          tenant_id: tenant.id,
-          name,
-          email,
-          role: ROLES.STORE_OWNER,
-          can_delete_data: true,
-          can_edit_data: true,
-          can_create_users: true,
-          created_by: authData.user.id
-      });
+      // حفظ في localStorage
+      localStorage.setItem('userId', userData.id);
+      localStorage.setItem('userEmail', userData.email);
+      localStorage.setItem('userName', userData.name);
 
       toast({ 
         title: 'تم إنشاء الحساب بنجاح!', 
         description: 'مرحباً بك في نظام إبراهيم للمحاسبة. جاري تسجيل الدخول...' 
       });
-      return authData;
+      
+      await fetchProfile(userData);
+      return { user: userData };
     } catch (error) {
       console.error('Registration error:', error);
       toast({ 
@@ -214,7 +215,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
     setUser(null);
     setTenant(null);
     window.location.href = '/login';

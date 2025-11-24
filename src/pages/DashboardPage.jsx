@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabaseService } from '@/lib/supabaseService';
+import { neonService } from '@/lib/neonService';
 import { TrendingUp, TrendingDown, Wallet, Users, AlertTriangle, Activity } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -71,10 +71,10 @@ const DashboardPage = () => {
         );
 
         const promises = [
-          Promise.race([supabaseService.getInvoicesIn(user.tenant_id).catch(() => []), timeoutPromise]),
-          Promise.race([supabaseService.getInvoicesOut(user.tenant_id).catch(() => []), timeoutPromise]),
-          Promise.race([supabaseService.getEmployees(user.tenant_id).catch(() => []), timeoutPromise]),
-          Promise.race([supabaseService.getInventory(user.tenant_id).catch(() => []), timeoutPromise])
+          Promise.race([neonService.getInvoicesIn(user.tenant_id).catch(() => []), timeoutPromise]),
+          Promise.race([neonService.getInvoicesOut(user.tenant_id).catch(() => []), timeoutPromise]),
+          Promise.race([neonService.getEmployees(user.tenant_id).catch(() => []), timeoutPromise]),
+          Promise.race([neonService.getInventory(user.tenant_id).catch(() => []), timeoutPromise])
         ];
 
         const results = await Promise.allSettled(promises);

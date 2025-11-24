@@ -275,7 +275,7 @@ export default defineConfig({
 					'react-vendor': ['react', 'react-dom', 'react-router-dom'],
 					'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
 					'charts': ['chart.js', 'react-chartjs-2'],
-					'supabase': ['@supabase/supabase-js'],
+					'postgres': ['postgres'],
 				},
 				chunkSizeWarningLimit: 1000,
 			},
