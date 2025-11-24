@@ -156,18 +156,8 @@ END;
 $$ language 'plpgsql';
 
 -- حذف جميع Triggers القديمة إن وجدت ثم إنشاؤها
-DO $$ 
-BEGIN
-    -- حذف trigger على tenants
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tenants_updated_at') THEN
-        DROP TRIGGER update_tenants_updated_at ON tenants;
-    END IF;
-    
-    -- حذف trigger على public_users
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_public_users_updated_at') THEN
-        DROP TRIGGER update_public_users_updated_at ON public_users;
-    END IF;
-END $$;
+DROP TRIGGER IF EXISTS update_tenants_updated_at ON tenants;
+DROP TRIGGER IF EXISTS update_public_users_updated_at ON public_users;
 
 -- إنشاء Triggers جديدة
 CREATE TRIGGER update_tenants_updated_at BEFORE UPDATE ON tenants
