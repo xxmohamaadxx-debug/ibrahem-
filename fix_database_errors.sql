@@ -10,7 +10,14 @@ ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW(),
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- 2. إنشاء فهرس على created_at للبحث السريع
-CREATE INDEX IF NOT EXISTS idx_tenants_created_at ON tenants(created_at DESC);
+-- استخدام CONCURRENTLY لتجنب حجب الجدول (يعمل فقط إذا كان الجدول غير فارغ)
+DO $$
+BEGIN
+    CREATE INDEX IF NOT EXISTS idx_tenants_created_at ON tenants(created_at DESC);
+EXCEPTION
+    WHEN duplicate_table THEN
+        RAISE NOTICE 'الفهرس موجود بالفعل';
+END $$;
 
 -- 3. إصلاح جدول public_users - إضافة الأعمدة المفقودة
 ALTER TABLE public_users
@@ -148,6 +155,21 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- حذف جميع Triggers القديمة إن وجدت ثم إنشاؤها
+DO $$ 
+BEGIN
+    -- حذف trigger على tenants
+    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tenants_updated_at') THEN
+        DROP TRIGGER update_tenants_updated_at ON tenants;
+    END IF;
+    
+    -- حذف trigger على public_users
+    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_public_users_updated_at') THEN
+        DROP TRIGGER update_public_users_updated_at ON public_users;
+    END IF;
+END $$;
+
+-- إنشاء Triggers جديدة
 CREATE TRIGGER update_tenants_updated_at BEFORE UPDATE ON tenants
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -160,24 +182,32 @@ SET role = 'SUPER_ADMIN',
     can_delete_data = true,
     can_edit_data = true,
     can_create_users = true
-WHERE email IN ('admin@ibrahim.com', 'systemibrahem@gmail.com');
+WHERE email IN ('admin@ibrahim.com', 'systemibrahem@gmail.com')
+AND (role IS NULL OR role != 'SUPER_ADMIN');
 
 -- 14. حذف جميع RLS policies القديمة إن وجدت (للتأكد من عدم وجود recursion)
 DO $$ 
 DECLARE
     r RECORD;
+    table_names TEXT[] := ARRAY['tenants', 'public_users', 'invoices_in', 'invoices_out', 'partners', 'inventory_items', 'employees'];
+    tbl_name TEXT;
 BEGIN
-    -- حذف جميع policies على public_users
-    FOR r IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' AND tablename = 'public_users') LOOP
-        EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(r.policyname) || ' ON ' || quote_ident(r.tablename);
-    END LOOP;
-    
-    -- حذف جميع policies على tenants
-    FOR r IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tenants') LOOP
-        EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(r.policyname) || ' ON ' || quote_ident(r.tablename);
+    -- حذف جميع policies على جميع الجداول
+    FOREACH tbl_name IN ARRAY table_names
+    LOOP
+        FOR r IN (
+            SELECT policyname 
+            FROM pg_policies 
+            WHERE schemaname = 'public' AND tablename = tbl_name
+        ) LOOP
+            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', r.policyname, tbl_name);
+        END LOOP;
     END LOOP;
     
     RAISE NOTICE 'تم حذف جميع RLS policies القديمة';
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'خطأ في حذف policies: %', SQLERRM;
 END $$;
 
 -- رسالة نجاح
