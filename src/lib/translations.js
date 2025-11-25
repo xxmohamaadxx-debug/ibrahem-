@@ -47,7 +47,9 @@ export const translations = {
       total: "Total",
       notes: "Notes",
       submit: "Submit",
-      back: "Back"
+      back: "Back",
+      all: "All",
+      none: "None"
     },
     dashboard: {
       welcome: "Welcome back,",
@@ -226,7 +228,26 @@ export const translations = {
       financialOverview: "نظرة عامة مالية",
       transactionVolume: "حجم المعاملات",
       systemName: "نظام إبراهيم للمحاسبة",
-      subtitle: "إليك ما يحدث في متجرك اليوم"
+      subtitle: "إليك ما يحدث في متجرك اليوم",
+      vsLastMonth: "مقارنة بالشهر الماضي",
+      items: "عنصر",
+      actionNeeded: "إجراء مطلوب: مراجعة المخزون",
+      allStockHealthy: "جميع مستويات المخزون صحية!",
+      financialOverviewByCurrency: "نظرة عامة مالية حسب العملة",
+      transactions: "المعاملات",
+      months: {
+        jan: "يناير",
+        feb: "فبراير",
+        mar: "مارس",
+        apr: "أبريل",
+        may: "مايو",
+        jun: "يونيو"
+      },
+      currencies: {
+        TRY: "ليرة تركية",
+        USD: "دولار",
+        SYP: "ليرة سورية"
+      }
     },
     auth: {
       loginTitle: "تسجيل الدخول",
