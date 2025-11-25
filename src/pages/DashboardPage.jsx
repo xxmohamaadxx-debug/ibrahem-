@@ -10,6 +10,7 @@ import { Line } from 'react-chartjs-2';
 import { motion } from 'framer-motion';
 import { formatDateAR } from '@/lib/dateUtils';
 import Logo from '@/components/Logo';
+import { CURRENCIES } from '@/lib/constants';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -44,7 +45,12 @@ const KPICard = ({ title, value, icon: Icon, trend, color, t }) => {
 const DashboardPage = () => {
   const { user } = useAuth();
   const { t, locale } = useLanguage();
-  const [stats, setStats] = useState({ income: 0, expenses: 0, net: 0, employees: 0, lowStock: 0 });
+  const [stats, setStats] = useState({ 
+    incomeByCurrency: { TRY: 0, USD: 0, SYP: 0 },
+    expensesByCurrency: { TRY: 0, USD: 0, SYP: 0 },
+    employees: 0, 
+    lowStock: 0 
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,7 +63,12 @@ const DashboardPage = () => {
 
       // For super admin, load empty stats (they don't have tenant-specific data)
       if (user?.isSuperAdmin && !user?.tenant_id) {
-        setStats({ income: 0, expenses: 0, net: 0, employees: 0, lowStock: 0 });
+        setStats({ 
+          incomeByCurrency: { TRY: 0, USD: 0, SYP: 0 },
+          expensesByCurrency: { TRY: 0, USD: 0, SYP: 0 },
+          employees: 0, 
+          lowStock: 0 
+        });
         setLoading(false);
         return;
       }
@@ -88,20 +99,39 @@ const DashboardPage = () => {
         const employees = Array.isArray(results[2].value) ? results[2].value : [];
         const inventory = Array.isArray(results[3].value) ? results[3].value : [];
         
-        const totalExpenses = invoicesIn.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-        const totalIncome = invoicesOut.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+        // حساب الإحصائيات لكل عملة منفصلة
+        const incomeByCurrency = { TRY: 0, USD: 0, SYP: 0 };
+        const expensesByCurrency = { TRY: 0, USD: 0, SYP: 0 };
+        
+        invoicesIn.forEach(inv => {
+          const currency = inv.currency || 'TRY';
+          if (expensesByCurrency.hasOwnProperty(currency)) {
+            expensesByCurrency[currency] += Number(inv.amount || 0);
+          }
+        });
+        
+        invoicesOut.forEach(inv => {
+          const currency = inv.currency || 'TRY';
+          if (incomeByCurrency.hasOwnProperty(currency)) {
+            incomeByCurrency[currency] += Number(inv.amount || 0);
+          }
+        });
         
         setStats({
-          income: totalIncome,
-          expenses: totalExpenses,
-          net: totalIncome - totalExpenses,
+          incomeByCurrency,
+          expensesByCurrency,
           employees: employees.filter(e => e?.status === 'Active').length,
           lowStock: inventory.filter(i => Number(i?.quantity || 0) <= Number(i?.min_stock || 5)).length
         });
       } catch (error) {
         console.error("Dashboard load error:", error);
         // Set default stats on error - don't leave page blank
-        setStats({ income: 0, expenses: 0, net: 0, employees: 0, lowStock: 0 });
+        setStats({ 
+          incomeByCurrency: { TRY: 0, USD: 0, SYP: 0 },
+          expensesByCurrency: { TRY: 0, USD: 0, SYP: 0 },
+          employees: 0, 
+          lowStock: 0 
+        });
       } finally {
         setLoading(false);
       }
@@ -159,9 +189,60 @@ const DashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <KPICard t={t} title={t('dashboard.totalIncome')} value={`$${stats.income.toLocaleString()}`} icon={TrendingUp} trend={12} color="bg-green-500" />
-        <KPICard t={t} title={t('dashboard.totalExpenses')} value={`$${stats.expenses.toLocaleString()}`} icon={TrendingDown} trend={-5} color="bg-red-500" />
-        <KPICard t={t} title={t('dashboard.netProfit')} value={`$${stats.net.toLocaleString()}`} icon={Wallet} trend={8} color="bg-blue-500" />
+        {/* إجمالي الدخل لكل عملة */}
+        {Object.entries(stats.incomeByCurrency).map(([currency, amount]) => {
+          if (amount === 0) return null;
+          const currencyInfo = CURRENCIES[currency] || { symbol: currency, code: currency };
+          return (
+            <KPICard 
+              key={`income-${currency}`}
+              t={t} 
+              title={`${t('dashboard.totalIncome')} (${currencyInfo.code})`} 
+              value={`${currencyInfo.symbol}${amount.toLocaleString()}`} 
+              icon={TrendingUp} 
+              trend={12} 
+              color="bg-green-500" 
+            />
+          );
+        })}
+        
+        {/* إجمالي المصروفات لكل عملة */}
+        {Object.entries(stats.expensesByCurrency).map(([currency, amount]) => {
+          if (amount === 0) return null;
+          const currencyInfo = CURRENCIES[currency] || { symbol: currency, code: currency };
+          return (
+            <KPICard 
+              key={`expenses-${currency}`}
+              t={t} 
+              title={`${t('dashboard.totalExpenses')} (${currencyInfo.code})`} 
+              value={`${currencyInfo.symbol}${amount.toLocaleString()}`} 
+              icon={TrendingDown} 
+              trend={-5} 
+              color="bg-red-500" 
+            />
+          );
+        })}
+        
+        {/* صافي الربح لكل عملة */}
+        {Object.entries(stats.incomeByCurrency).map(([currency, income]) => {
+          const expenses = stats.expensesByCurrency[currency] || 0;
+          const net = income - expenses;
+          if (income === 0 && expenses === 0) return null;
+          const currencyInfo = CURRENCIES[currency] || { symbol: currency, code: currency };
+          return (
+            <KPICard 
+              key={`net-${currency}`}
+              t={t} 
+              title={`${t('dashboard.netProfit')} (${currencyInfo.code})`} 
+              value={`${currencyInfo.symbol}${net.toLocaleString()}`} 
+              icon={Wallet} 
+              trend={net >= 0 ? 8 : -8} 
+              color="bg-blue-500" 
+            />
+          );
+        })}
+        
+        {/* الموظفون النشطون - بطاقة واحدة */}
         <KPICard t={t} title={t('dashboard.activeEmployees')} value={stats.employees} icon={Users} color="bg-orange-500" />
       </div>
 
