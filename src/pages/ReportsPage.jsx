@@ -203,7 +203,7 @@ const ReportsPage = () => {
 
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">{t('reports.selectPeriod')}</label>
               <select

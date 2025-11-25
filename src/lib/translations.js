@@ -165,6 +165,12 @@ export const translations = {
       none: "بدون",
       close: "إغلاق",
       confirm: "تأكيد",
+    },
+    nav: {
+      overview: "نظرة عامة",
+      management: "إدارة",
+      system: "النظام"
+    },
       yes: "نعم",
       no: "لا",
       update: "تحديث",

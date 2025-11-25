@@ -47,7 +47,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </button>
       </div>
 
-      <nav className="flex-1 px-4 overflow-y-auto h-[calc(100vh-80px)]">
+      <nav className="flex-1 px-2 sm:px-4 overflow-y-auto h-[calc(100vh-80px)] pb-4">
         {/* Admin Panel - فقط للمشرفين */}
         {user?.isSuperAdmin && (
           <>

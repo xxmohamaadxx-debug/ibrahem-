@@ -21,11 +21,14 @@ const Logo = ({ size = 'md', showText = true, className = '' }) => {
       <img 
         src="/logo.png" 
         alt="نظام إبراهيم للمحاسبة" 
-        className={`${sizeClasses[size]} object-contain`}
+        className={`${sizeClasses[size]} object-contain flex-shrink-0`}
+        style={{ maxWidth: '100%', height: 'auto' }}
         onError={(e) => {
           // Fallback to SVG logo if PNG not found
           e.target.style.display = 'none';
-          e.target.nextSibling.style.display = 'block';
+          if (e.target.nextSibling) {
+            e.target.nextSibling.style.display = 'block';
+          }
         }}
       />
       <div className={`relative ${sizeClasses[size]} rounded-lg bg-gradient-to-tr from-orange-500 to-pink-500 flex items-center justify-center text-white font-bold shadow-lg overflow-hidden hidden`}>
