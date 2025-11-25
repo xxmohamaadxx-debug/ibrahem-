@@ -13,31 +13,33 @@ import Logo from '@/components/Logo';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
 
-const KPICard = ({ title, value, icon: Icon, trend, color }) => (
-  <motion.div 
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700"
-  >
-    <div className="flex justify-between items-start">
-      <div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-        <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mt-2">{value}</h3>
+const KPICard = ({ title, value, icon: Icon, trend, color, t }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700"
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+          <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mt-2">{value}</h3>
+        </div>
+        <div className={`p-2 md:p-3 rounded-lg ${color}`}>
+          <Icon className="h-5 w-5 md:h-6 md:w-6 text-white" />
+        </div>
       </div>
-      <div className={`p-2 md:p-3 rounded-lg ${color}`}>
-        <Icon className="h-5 w-5 md:h-6 md:w-6 text-white" />
-      </div>
-    </div>
-    {trend && (
-      <div className="mt-4 flex items-center text-xs md:text-sm">
-        <span className={trend >= 0 ? "text-green-500" : "text-red-500"}>
-          {trend >= 0 ? "+" : ""}{trend}%
-        </span>
-        <span className="ml-2 text-gray-400">vs last month</span>
-      </div>
-    )}
-  </motion.div>
-);
+      {trend && (
+        <div className="mt-4 flex items-center text-xs md:text-sm">
+          <span className={trend >= 0 ? "text-green-500" : "text-red-500"}>
+            {trend >= 0 ? "+" : ""}{trend}%
+          </span>
+          <span className="ml-2 rtl:mr-2 rtl:ml-0 text-gray-400">{t('dashboard.vsLastMonth')}</span>
+        </div>
+      )}
+    </motion.div>
+  );
+};
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -111,7 +113,14 @@ const DashboardPage = () => {
   }, [user?.tenant_id, user?.isSuperAdmin, user?.id]);
 
   const chartData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: [
+      t('dashboard.months.jan'),
+      t('dashboard.months.feb'),
+      t('dashboard.months.mar'),
+      t('dashboard.months.apr'),
+      t('dashboard.months.may'),
+      t('dashboard.months.jun')
+    ],
     datasets: [
       { label: t('dashboard.totalIncome'), data: [12000, 19000, 3000, 5000, 20000, 30000], borderColor: 'rgb(34, 197, 94)', backgroundColor: 'rgba(34, 197, 94, 0.5)' },
       { label: t('dashboard.totalExpenses'), data: [8000, 12000, 15000, 4000, 10000, 15000], borderColor: 'rgb(239, 68, 68)', backgroundColor: 'rgba(239, 68, 68, 0.5)' },
@@ -140,10 +149,10 @@ const DashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <KPICard title={t('dashboard.totalIncome')} value={`$${stats.income.toLocaleString()}`} icon={TrendingUp} trend={12} color="bg-green-500" />
-        <KPICard title={t('dashboard.totalExpenses')} value={`$${stats.expenses.toLocaleString()}`} icon={TrendingDown} trend={-5} color="bg-red-500" />
-        <KPICard title={t('dashboard.netProfit')} value={`$${stats.net.toLocaleString()}`} icon={Wallet} trend={8} color="bg-blue-500" />
-        <KPICard title={t('dashboard.activeEmployees')} value={stats.employees} icon={Users} color="bg-orange-500" />
+        <KPICard t={t} title={t('dashboard.totalIncome')} value={`$${stats.income.toLocaleString()}`} icon={TrendingUp} trend={12} color="bg-green-500" />
+        <KPICard t={t} title={t('dashboard.totalExpenses')} value={`$${stats.expenses.toLocaleString()}`} icon={TrendingDown} trend={-5} color="bg-red-500" />
+        <KPICard t={t} title={t('dashboard.netProfit')} value={`$${stats.net.toLocaleString()}`} icon={Wallet} trend={8} color="bg-blue-500" />
+        <KPICard t={t} title={t('dashboard.activeEmployees')} value={stats.employees} icon={Users} color="bg-orange-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -156,16 +165,16 @@ const DashboardPage = () => {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 dark:text-white">{t('dashboard.lowStock')}</h3>
-              <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full font-medium">{stats.lowStock} Items</span>
+              <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full font-medium">{stats.lowStock} {t('dashboard.items')}</span>
             </div>
             {stats.lowStock > 0 ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/30">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
-                  <span className="text-gray-700 dark:text-gray-300">Action needed: Review inventory</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('dashboard.actionNeeded')}</span>
                 </div>
               </div>
-            ) : <div className="text-center py-4 text-gray-500 text-sm">All stock levels are healthy!</div>}
+            ) : <div className="text-center py-4 text-gray-500 text-sm">{t('dashboard.allStockHealthy')}</div>}
           </div>
         </div>
       </div>

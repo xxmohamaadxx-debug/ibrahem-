@@ -58,7 +58,26 @@ export const translations = {
       lowStock: "Low Stock Alert",
       recentActivity: "Recent Activity",
       financialOverview: "Financial Overview",
-      transactionVolume: "Transaction Volume"
+      transactionVolume: "Transaction Volume",
+      vsLastMonth: "vs last month",
+      items: "Items",
+      actionNeeded: "Action needed: Review inventory",
+      allStockHealthy: "All stock levels are healthy!",
+      financialOverviewByCurrency: "Financial Overview by Currency",
+      transactions: "Transactions",
+      months: {
+        jan: "Jan",
+        feb: "Feb",
+        mar: "Mar",
+        apr: "Apr",
+        may: "May",
+        jun: "Jun"
+      },
+      currencies: {
+        TRY: "TRY",
+        USD: "USD",
+        SYP: "SYP"
+      }
     },
     auth: {
       loginTitle: "Login to your account",

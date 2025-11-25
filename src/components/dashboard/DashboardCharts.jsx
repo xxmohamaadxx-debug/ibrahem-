@@ -55,7 +55,7 @@ const DashboardCharts = ({ income, expenses }) => {
       },
       title: {
         display: true,
-        text: 'Financial Overview by Currency',
+        text: t('dashboard.financialOverviewByCurrency'),
       },
     },
   };
@@ -63,7 +63,11 @@ const DashboardCharts = ({ income, expenses }) => {
   // Prepare data for Doughnut Chart (Transaction Volume Count - Mocked logic for visual)
   // In a real app, you'd count actual transactions per currency
   const doughnutData = {
-    labels: ['TRY Transactions', 'USD Transactions', 'SYP Transactions'],
+    labels: [
+      `${t('dashboard.currencies.TRY')} ${t('dashboard.transactions')}`,
+      `${t('dashboard.currencies.USD')} ${t('dashboard.transactions')}`,
+      `${t('dashboard.currencies.SYP')} ${t('dashboard.transactions')}`
+    ],
     datasets: [
       {
         data: [65, 25, 10], // Mock distribution
@@ -89,7 +93,7 @@ const DashboardCharts = ({ income, expenses }) => {
       </div>
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex items-center justify-center">
         <div className="w-3/4">
-          <h3 className="text-center text-gray-600 dark:text-gray-300 font-semibold mb-4">Transaction Volume</h3>
+          <h3 className="text-center text-gray-600 dark:text-gray-300 font-semibold mb-4">{t('dashboard.transactionVolume')}</h3>
           <Doughnut data={doughnutData} />
         </div>
       </div>

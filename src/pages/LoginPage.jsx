@@ -51,7 +51,7 @@ const LoginPage = () => {
             animate={{ scale: 1, opacity: 1 }}
             className="flex justify-center mb-6"
           >
-            <Logo size="xl" showText={false} />
+            <Logo size="xl" showText={true} />
           </motion.div>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
             {t('auth.welcomeBack')}
