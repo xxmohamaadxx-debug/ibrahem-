@@ -165,12 +165,6 @@ export const translations = {
       none: "بدون",
       close: "إغلاق",
       confirm: "تأكيد",
-    },
-    nav: {
-      overview: "نظرة عامة",
-      management: "إدارة",
-      system: "النظام"
-    },
       yes: "نعم",
       no: "لا",
       update: "تحديث",
@@ -190,6 +184,11 @@ export const translations = {
       finish: "إنهاء",
       welcome: "مرحباً",
       systemName: "نظام إبراهيم للمحاسبة"
+    },
+    nav: {
+      overview: "نظرة عامة",
+      management: "إدارة",
+      system: "النظام"
     },
     subscription: {
       title: "خطط الاشتراك",
@@ -296,7 +295,7 @@ export const translations = {
       rejected: "مرفوض",
       expired: "منتهي الصلاحية"
     },
-    subscription: {
+    subscriptionPage: {
       expiringSoon: "قرب انتهاء الاشتراك",
       title: "الاشتراكات",
       currentPlan: "خطتك الحالية",
