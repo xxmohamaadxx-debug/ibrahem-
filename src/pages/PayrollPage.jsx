@@ -41,7 +41,11 @@ const PayrollPage = () => {
 
   const handleSave = async (data) => {
     if (!user?.tenant_id) {
-      toast({ title: 'خطأ', variant: 'destructive' });
+      toast({ 
+        title: "خطأ", 
+        description: "لا يمكن حفظ البيانات. يجب أن تكون مرتبطاً بمتجر.",
+        variant: "destructive" 
+      });
       return;
     }
 
@@ -55,12 +59,16 @@ const PayrollPage = () => {
       }, user.tenant_id);
       
       await neonService.log(user.tenant_id, user.id, 'GENERATE_PAYROLL', `تم إنشاء راتب لـ ${data.employee_name}`);
-      toast({ title: 'تم إنشاء الراتب بنجاح' });
+      toast({ title: 'تم إضافة البيانات بنجاح' });
       loadData();
       setDialogOpen(false);
     } catch (error) {
       console.error('Save payroll error:', error);
-      toast({ title: 'خطأ في حفظ الراتب', variant: 'destructive' });
+      toast({ 
+        title: "خطأ في حفظ البيانات", 
+        description: error.message || "حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.",
+        variant: "destructive" 
+      });
     }
   };
 

@@ -54,17 +54,33 @@ const PartnersPage = () => {
   };
 
   const handleSave = async (data) => {
+    if (!user?.tenant_id) {
+      toast({ 
+        title: "خطأ", 
+        description: "لا يمكن حفظ البيانات. يجب أن تكون مرتبطاً بمتجر.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     try {
       if (selected) {
         await neonService.updatePartner(selected.id, data, user.tenant_id);
+        toast({ title: "تم تحديث البيانات بنجاح" });
       } else {
         await neonService.createPartner(data, user.tenant_id);
+        toast({ title: "تم إضافة البيانات بنجاح" });
       }
       setDialogOpen(false);
+      setSelected(null);
       loadData();
-      toast({ title: t('partners.saved') });
     } catch (e) {
-      toast({ title: t('partners.error'), variant: "destructive" });
+      console.error('Save partner error:', e);
+      toast({ 
+        title: "خطأ في حفظ البيانات", 
+        description: e.message || "حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.",
+        variant: "destructive" 
+      });
     }
   };
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Plus, Store, Calendar, AlertTriangle, Phone, MessageCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { SUBSCRIPTION_PLANS, CONTACT_INFO } from '@/lib/constants';
+import { SUBSCRIPTION_PLANS, CONTACT_INFO, ROLES } from '@/lib/constants';
 
 const AdminPanel = () => {
   const { user } = useAuth();
@@ -48,16 +48,80 @@ const AdminPanel = () => {
 
   const handleCreateStore = async (e) => {
     e.preventDefault();
+    
+    // التحقق من البيانات
+    if (!formData.storeName || !formData.ownerName || !formData.email || !formData.password) {
+      toast({ 
+        title: "خطأ", 
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      toast({ 
-        title: t('adminPanel.errors.systemLimitation'), 
-        description: t('adminPanel.errors.createStoreNote'),
-        variant: "warning"
+      // 1. إنشاء المستخدم (مدير المتجر) أولاً
+      const newUser = await neonService.createUser({
+        email: formData.email,
+        password: formData.password,
+        name: formData.ownerName,
+        role: ROLES.STORE_OWNER,
+        tenant_id: null, // سيتم تحديثه بعد إنشاء المتجر
+        can_delete_data: true,
+        can_edit_data: true,
+        can_create_users: true,
+        created_by: user?.id || null
       });
+
+      // 2. إنشاء المتجر (Tenant)
+      const planMap = {
+        'monthly': SUBSCRIPTION_PLANS.MONTHLY,
+        '6months': SUBSCRIPTION_PLANS.SIX_MONTHS,
+        'yearly': SUBSCRIPTION_PLANS.YEARLY
+      };
+      const plan = planMap[formData.plan] || SUBSCRIPTION_PLANS.MONTHLY;
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + plan.durationDays);
+
+      const newTenant = await neonService.createTenant(formData.storeName, newUser.id);
+      
+      // 3. تحديث Tenant ببيانات الاشتراك
+      await neonService.updateTenant(newTenant.id, {
+        subscription_plan: formData.plan,
+        subscription_status: 'active',
+        subscription_expires_at: expiryDate.toISOString()
+      });
+
+      // 4. تحديث المستخدم بـ tenant_id
+      await neonService.updateUserAdmin(newUser.id, {
+        tenant_id: newTenant.id
+      });
+
+      toast({ 
+        title: "تم بنجاح", 
+        description: `تم إنشاء المتجر "${formData.storeName}" وحساب المدير بنجاح`,
+        variant: "default"
+      });
+
+      // إعادة تعيين النموذج
+      setFormData({
+        storeName: '',
+        ownerName: '',
+        email: '',
+        password: '',
+        plan: 'monthly'
+      });
+      
       setDialogOpen(false);
+      fetchStores();
     } catch (error) {
-      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+      console.error('Create store error:', error);
+      toast({ 
+        title: "خطأ في إنشاء المتجر", 
+        description: error.message || "حدث خطأ أثناء إنشاء المتجر. يرجى المحاولة مرة أخرى.",
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -208,22 +272,108 @@ const AdminPanel = () => {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
                 <DialogTitle>{t('adminPanel.createNewStore')}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 rounded-lg text-sm flex items-start gap-2">
-                    <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-                    <p>{t('adminPanel.note')}</p>
+            <form onSubmit={handleCreateStore} className="space-y-4 py-4">
+                <div>
+                    <label className="block text-sm font-medium mb-1 rtl:text-right">اسم المتجر *</label>
+                    <input
+                        type="text"
+                        required
+                        value={formData.storeName}
+                        onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
+                        placeholder="اسم المتجر"
+                    />
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => setDialogOpen(false)} variant="outline" className="flex-1">{t('common.cancel')}</Button>
-                  <Button onClick={() => window.open('/register', '_blank')} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white">
-                    {t('adminPanel.goToRegister')}
-                  </Button>
+
+                <div>
+                    <label className="block text-sm font-medium mb-1 rtl:text-right">اسم مدير المتجر *</label>
+                    <input
+                        type="text"
+                        required
+                        value={formData.ownerName}
+                        onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
+                        placeholder="اسم المدير"
+                    />
                 </div>
-            </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-1 rtl:text-right">البريد الإلكتروني *</label>
+                    <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
+                        placeholder="email@example.com"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-1 rtl:text-right">كلمة المرور *</label>
+                    <input
+                        type="password"
+                        required
+                        minLength={6}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
+                        placeholder="كلمة المرور (6 أحرف على الأقل)"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-1 rtl:text-right">خطة الاشتراك</label>
+                    <select
+                        value={formData.plan}
+                        onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
+                    >
+                        <option value="monthly">شهري (30 يوم)</option>
+                        <option value="6months">6 أشهر (180 يوم)</option>
+                        <option value="yearly">سنوي (365 يوم)</option>
+                    </select>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                    <Button 
+                        type="button"
+                        onClick={() => {
+                            setDialogOpen(false);
+                            setFormData({
+                                storeName: '',
+                                ownerName: '',
+                                email: '',
+                                password: '',
+                                plan: 'monthly'
+                            });
+                        }} 
+                        variant="outline" 
+                        className="flex-1"
+                        disabled={loading}
+                    >
+                        {t('common.cancel')}
+                    </Button>
+                    <Button 
+                        type="submit" 
+                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin ml-2 rtl:mr-2 rtl:ml-0" />
+                                جاري الإنشاء...
+                            </>
+                        ) : (
+                            'إنشاء المتجر'
+                        )}
+                    </Button>
+                </div>
+            </form>
         </DialogContent>
       </Dialog>
     </div>

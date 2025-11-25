@@ -41,17 +41,21 @@ const InventoryPage = () => {
 
   const handleSave = async (data) => {
     if (!user?.tenant_id) {
-      toast({ title: t('common.error'), variant: "destructive" });
+      toast({ 
+        title: "خطأ", 
+        description: "لا يمكن حفظ البيانات. يجب أن تكون مرتبطاً بمتجر.",
+        variant: "destructive" 
+      });
       return;
     }
 
     try {
       if (selectedItem) {
         await neonService.updateInventory(selectedItem.id, data, user.tenant_id);
-        toast({ title: t('inventory.updated') });
+        toast({ title: "تم تحديث البيانات بنجاح" });
       } else {
         await neonService.createInventory(data, user.tenant_id);
-        toast({ title: t('inventory.created') });
+        toast({ title: "تم إضافة البيانات بنجاح" });
       }
       setDialogOpen(false);
       setSelectedItem(null);
@@ -59,8 +63,8 @@ const InventoryPage = () => {
     } catch (e) {
       console.error('Save inventory error:', e);
       toast({ 
-        title: t('inventory.saveError'), 
-        description: e.message || t('common.error'),
+        title: "خطأ في حفظ البيانات", 
+        description: e.message || "حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.",
         variant: "destructive" 
       });
     }

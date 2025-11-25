@@ -48,27 +48,35 @@ const InvoicesOutPage = () => {
 
   const handleSave = async (invoiceData) => {
     if (!user?.tenant_id) {
-      toast({ title: t('common.error'), variant: "destructive" });
+      toast({ 
+        title: "خطأ", 
+        description: "لا يمكن حفظ البيانات. يجب أن تكون مرتبطاً بمتجر.",
+        variant: "destructive" 
+      });
       return;
     }
 
     try {
       if (selectedInvoice) {
         await neonService.updateInvoiceOut(selectedInvoice.id, invoiceData, user.tenant_id);
-        toast({ title: t('common.success') });
+        toast({ title: "تم تحديث البيانات بنجاح" });
       } else {
         await neonService.createInvoiceOut({
           ...invoiceData,
           date: invoiceData.date || new Date().toISOString().split('T')[0],
         }, user.tenant_id);
-        toast({ title: t('common.success') });
+        toast({ title: "تم إضافة البيانات بنجاح" });
       }
       setDialogOpen(false);
       setSelectedInvoice(null);
       loadInvoices();
     } catch (error) {
       console.error('Invoice save error:', error);
-      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
+      toast({ 
+        title: "خطأ في حفظ البيانات", 
+        description: error.message || "حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.",
+        variant: "destructive" 
+      });
     }
   };
 

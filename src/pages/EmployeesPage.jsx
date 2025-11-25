@@ -28,13 +28,34 @@ const EmployeesPage = () => {
   };
 
   const handleSave = async (data) => {
+    if (!user?.tenant_id) {
+      toast({ 
+        title: "خطأ", 
+        description: "لا يمكن حفظ البيانات. يجب أن تكون مرتبطاً بمتجر.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     try {
-      if (selected) await neonService.updateEmployee(selected.id, data, user.tenant_id);
-      else await neonService.createEmployee(data, user.tenant_id);
+      if (selected) {
+        await neonService.updateEmployee(selected.id, data, user.tenant_id);
+        toast({ title: "تم تحديث البيانات بنجاح" });
+      } else {
+        await neonService.createEmployee(data, user.tenant_id);
+        toast({ title: "تم إضافة البيانات بنجاح" });
+      }
       setDialogOpen(false);
+      setSelected(null);
       loadData();
-      toast({ title: t('common.success') });
-    } catch (e) { toast({ title: t('common.error'), variant: "destructive" }); }
+    } catch (e) {
+      console.error('Save employee error:', e);
+      toast({ 
+        title: "خطأ في حفظ البيانات", 
+        description: e.message || "حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.",
+        variant: "destructive" 
+      });
+    }
   };
 
   const handleDelete = async (id) => {
