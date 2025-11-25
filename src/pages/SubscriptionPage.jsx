@@ -9,7 +9,6 @@ import { SUBSCRIPTION_PLANS, CONTACT_INFO } from '@/lib/constants';
 import { motion } from 'framer-motion';
 import Logo from '@/components/Logo';
 import { formatDateAR } from '@/lib/dateUtils';
-import { formatDateAR } from '@/lib/dateUtils';
 
 const SubscriptionPage = () => {
   const { tenant, user } = useAuth();
