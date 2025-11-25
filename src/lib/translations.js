@@ -239,7 +239,7 @@ export const translations = {
       vsLastMonth: "مقارنة بالشهر الماضي",
       items: "عنصر",
       actionNeeded: "إجراء مطلوب: مراجعة المستودع",
-      allStockHealthy: "جميع مستويات المخزون صحية!",
+      allStockHealthy: "جميع مستويات المستودع صحية!",
       financialOverviewByCurrency: "نظرة عامة مالية حسب العملة",
       transactions: "المعاملات",
       months: {

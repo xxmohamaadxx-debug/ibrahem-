@@ -10,7 +10,7 @@ const InventoryTable = ({ items, onEdit, onDelete }) => {
   if (items.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-        {t('inventory.noItems') || 'لا توجد منتجات في المخزون. أضف منتجك الأول!'}
+        {t('inventory.noItems') || 'لا توجد منتجات في المستودع. أضف منتجك الأول!'}
       </div>
     );
   }

@@ -340,67 +340,6 @@ const InvoicesInPage = () => {
           })()
         )}
       </div>
-                  <div key={inv.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-100 dark:border-gray-700">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-500">{inv.date ? formatDateShort(inv.date) : '-'}</span>
-                      <span className={`px-2 py-0.5 rounded text-xs ${inv.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{inv.status}</span>
-                    </div>
-                    <p className="font-medium text-gray-900 dark:text-white mb-2">{inv.description}</p>
-                    <div className="text-lg font-bold text-red-500 text-right">{inv.amount} {inv.currency}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Table View */}
-              <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-x-auto">
-                <table className="w-full text-left rtl:text-right">
-                  <thead>
-                    <tr className="border-b dark:border-gray-700">
-                      <th className="p-4 text-sm font-semibold">{t('common.date')}</th>
-                      <th className="p-4 text-sm font-semibold">{t('common.description')}</th>
-                      <th className="p-4 text-sm font-semibold">{t('common.category')}</th>
-                      <th className="p-4 text-sm font-semibold">{t('common.amount')}</th>
-                      <th className="p-4 text-sm font-semibold">{t('common.currency')}</th>
-                      <th className="p-4 text-sm font-semibold">{t('common.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {invoices.map(inv => (
-                      <tr key={inv.id} className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                        <td className="p-4 text-sm">{inv.date ? formatDateAR(inv.date) : '-'}</td>
-                        <td className="p-4 text-sm">{inv.description || '-'}</td>
-                        <td className="p-4 text-sm">{inv.category || '-'}</td>
-                        <td className="p-4 text-sm font-bold text-red-500">{inv.amount || 0}</td>
-                        <td className="p-4 text-sm">{inv.currency || 'TRY'}</td>
-                        <td className="p-4">
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => handleEdit(inv)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={async () => {
-                              if (window.confirm(t('common.confirmDelete'))) {
-                                try {
-                                  await neonService.deleteInvoiceIn(inv.id, user.tenant_id);
-                                  toast({ title: t('common.success') });
-                                  loadInvoices();
-                                } catch (error) {
-                                  toast({ title: t('common.error'), variant: "destructive" });
-                                }
-                              }
-                            }}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )
-        )}
-      </div>
       <InvoiceDialog 
         open={dialogOpen} 
         onOpenChange={setDialogOpen} 
