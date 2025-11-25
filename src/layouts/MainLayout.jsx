@@ -4,7 +4,25 @@ import Sidebar from '@/components/Sidebar';
 import TopNav from '@/components/TopNav';
 
 const MainLayout = ({ children }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Sidebar should be open by default on large screens
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // Check if screen is large on mount
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024; // lg breakpoint
+    }
+    return true; // Default to open
+  });
+  
+  // Keep sidebar open on large screens
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">

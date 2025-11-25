@@ -31,7 +31,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   return (
     <div className={`
       fixed inset-y-0 rtl:right-0 ltr:left-0 z-30 w-64 bg-white dark:bg-gray-900 border-l rtl:border-r rtl:border-l-0 border-gray-200 dark:border-gray-800 
-      transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
+      transform transition-transform duration-300 ease-in-out
+      lg:relative lg:translate-x-0 lg:static
       ${isOpen ? 'translate-x-0' : 'rtl:translate-x-full ltr:-translate-x-full lg:translate-x-0'}
     `}>
       <div className="p-4 md:p-6 flex justify-between items-center border-b border-gray-200 dark:border-gray-800">
