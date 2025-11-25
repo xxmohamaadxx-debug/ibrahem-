@@ -18,7 +18,7 @@ const MainLayout = ({ children }) => {
         />
       )}
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 lg:rtl:mr-64">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
         <TopNav onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 scroll-smooth">
           <div className="max-w-7xl mx-auto w-full">

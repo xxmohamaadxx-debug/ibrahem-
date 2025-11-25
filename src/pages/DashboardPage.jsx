@@ -127,10 +127,16 @@ const DashboardPage = () => {
     ],
   };
 
-  if (loading) return <div className="p-8 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-orange-500 rounded-full border-t-transparent"></div></div>;
+  if (loading && !user) {
+    return (
+      <div className="p-8 flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin h-8 w-8 border-4 border-orange-500 rounded-full border-t-transparent"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-[500px]">
       <Helmet><title>{t('common.dashboard')} - Ibrahim System</title></Helmet>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -139,8 +145,12 @@ const DashboardPage = () => {
             <Logo size="md" showText={true} />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.welcome')} {user?.name} 👋</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('dashboard.subtitle')}</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              {t('dashboard.welcome')} {user?.name || 'المستخدم'} 👋
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              {t('dashboard.subtitle') || 'إليك ما يحدث في متجرك اليوم'}
+            </p>
           </div>
         </div>
         <div className="text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
