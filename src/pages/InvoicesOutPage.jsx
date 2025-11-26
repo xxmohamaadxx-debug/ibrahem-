@@ -20,6 +20,7 @@ const InvoicesOutPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCurrency, setFilterCurrency] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterPeriod, setFilterPeriod] = useState('day'); // 'day', 'week', 'month', 'all'
   const [groupBy, setGroupBy] = useState('none'); // 'date', 'currency', 'category', 'none'
 
   useEffect(() => {
@@ -159,6 +160,16 @@ const InvoicesOutPage = () => {
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
           />
           <select
+            value={filterPeriod}
+            onChange={(e) => setFilterPeriod(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
+          >
+            <option value="day">اليوم</option>
+            <option value="week">هذا الأسبوع</option>
+            <option value="month">هذا الشهر</option>
+            <option value="all">الكل</option>
+          </select>
+          <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value)}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
@@ -174,8 +185,29 @@ const InvoicesOutPage = () => {
       <div className="space-y-4">
         {loading ? <Loader2 className="animate-spin mx-auto" /> : (
           (() => {
+            // Filter by period first
+            const now = new Date();
+            let startDate = null;
+            
+            if (filterPeriod === 'day') {
+              startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            } else if (filterPeriod === 'week') {
+              const dayOfWeek = now.getDay();
+              const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Monday
+              startDate = new Date(now.setDate(diff));
+              startDate.setHours(0, 0, 0, 0);
+            } else if (filterPeriod === 'month') {
+              startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            }
+            
             // Filter invoices
             let filteredInvoices = invoices.filter(inv => {
+              // Period filter
+              if (filterPeriod !== 'all' && startDate) {
+                const invDate = new Date(inv.date || inv.created_at);
+                if (invDate < startDate) return false;
+              }
+              
               const matchesSearch = !searchTerm || 
                 inv.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 inv.partner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

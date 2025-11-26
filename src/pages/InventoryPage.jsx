@@ -17,6 +17,8 @@ const InventoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [filterPeriod, setFilterPeriod] = useState('all'); // 'day', 'week', 'month', 'all'
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (user?.tenant_id) loadData();
@@ -94,10 +96,67 @@ const InventoryPage = () => {
         </Button>
       </div>
       
+      {/* Filters */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="بحث في المستودع..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
+            />
+          </div>
+          <select
+            value={filterPeriod}
+            onChange={(e) => setFilterPeriod(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
+          >
+            <option value="all">الكل</option>
+            <option value="day">اليوم</option>
+            <option value="week">هذا الأسبوع</option>
+            <option value="month">هذا الشهر</option>
+          </select>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        {loading ? <Loader2 className="animate-spin mx-auto" /> : 
-          <InventoryTable items={items} onEdit={(i) => { setSelectedItem(i); setDialogOpen(true); }} onDelete={handleDelete} />
-        }
+        {loading ? <Loader2 className="animate-spin mx-auto" /> : (() => {
+          // Filter items
+          let filteredItems = items.filter(item => {
+            const matchesSearch = !searchTerm || 
+              item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              item.code?.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            // Period filter (if items have created_at or date field)
+            if (filterPeriod !== 'all' && item.created_at) {
+              const now = new Date();
+              let startDate = null;
+              
+              if (filterPeriod === 'day') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              } else if (filterPeriod === 'week') {
+                const dayOfWeek = now.getDay();
+                const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                startDate = new Date(now.setDate(diff));
+                startDate.setHours(0, 0, 0, 0);
+              } else if (filterPeriod === 'month') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+              }
+              
+              if (startDate) {
+                const itemDate = new Date(item.created_at);
+                if (itemDate < startDate) return false;
+              }
+            }
+            
+            return matchesSearch;
+          });
+          
+          return <InventoryTable items={filteredItems} onEdit={(i) => { setSelectedItem(i); setDialogOpen(true); }} onDelete={handleDelete} />;
+        })()}
       </div>
 
       <InventoryDialog open={dialogOpen} onOpenChange={setDialogOpen} item={selectedItem} onSave={handleSave} />
