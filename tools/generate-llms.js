@@ -175,9 +175,11 @@ function main() {
 }
 
 // Check if this file is being run directly
-try {
-  main();
-} catch (error) {
-  console.warn('Warning: llms.txt generation failed, continuing build...', error.message);
-  process.exit(0);
+if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.includes('generate-llms')) {
+  try {
+    main();
+  } catch (error) {
+    console.warn('Warning: llms.txt generation failed, continuing build...', error.message);
+    process.exit(0);
+  }
 }
